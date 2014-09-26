@@ -111,3 +111,23 @@ runRetconHandler opt cfg store a = do
     _ <- finaliseEntities state
     return ret
 
+-- * Action monad
+
+-- $ Data source operations execute in the 'DataSourceAction' monad. This monad
+-- allows a restricted range of effects, helping to isolate code which
+-- interacts with external systems and minimising their potential to
+-- accidentally interfere with retcon's internal data.
+
+-- | Run a 'DataSourceAction' action.
+runDataSourceAction :: RetconStore store => state
+                    -> DataSourceAction store state a
+                    -> RetconHandler store (Either RetconError a)
+runDataSourceAction state a = do
+    store <- asks retconStore
+    liftIO
+        . runStderrLoggingT
+        . runExceptT
+        . flip runReaderT store
+        . flip runReaderT state
+        . unDataSourceAction $ a
+
