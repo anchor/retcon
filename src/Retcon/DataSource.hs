@@ -84,21 +84,21 @@ class (KnownSymbol source, RetconEntity entity) => RetconDataSource entity sourc
     -- monad.
     setDocument :: Document
                 -> Maybe (ForeignKey entity source)
-                -> DataSourceAction (DataSourceState entity source) (ForeignKey entity source)
+                -> DataSourceAction s (DataSourceState entity source) (ForeignKey entity source)
 
     -- | Retrieve a document from a data source.
     --
     -- If the document cannot be retrieved an error is returned in the 'Retcon'
     -- monad.
     getDocument :: ForeignKey entity source
-                -> DataSourceAction (DataSourceState entity source) Document
+                -> DataSourceAction s (DataSourceState entity source) Document
 
     -- | Delete a document from a data source.
     --
     -- If the document cannot be deleted an error is returned in the 'Retcon'
     -- monad.
     deleteDocument :: ForeignKey entity source
-                   -> DataSourceAction (DataSourceState entity source) ()
+                   -> DataSourceAction s (DataSourceState entity source) ()
 
 -- * Wrapper types
 --
@@ -232,17 +232,17 @@ finaliseSources = mapM finaliseSource
 -- implemented in the 'DataSourceAction' monad.
 
 -- | Monad transformer stack used in the 'DataSourceAction' monad.
-type DataSourceActionStack s = ReaderT s (ExceptT RetconError (LoggingT IO))
+type DataSourceActionStack store state = ReaderT state (ReaderT store (ExceptT RetconError (LoggingT IO)))
 
 -- | Monad for interactions with data sources.
 --
 -- This monad provides error handling, logging, and I/O facilities.
-newtype DataSourceAction s a =
+newtype DataSourceAction store state a =
     DataSourceAction {
-        unDataSourceAction :: DataSourceActionStack s a
+        unDataSourceAction :: DataSourceActionStack store state a
     }
   deriving (Functor, Applicative, Monad, MonadBase IO, MonadIO, MonadLogger,
-  MonadError RetconError, MonadReader s)
+  MonadError RetconError, MonadReader state)
 
 -- * Keys
 --

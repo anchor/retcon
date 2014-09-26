@@ -119,13 +119,15 @@ runRetconHandler opt cfg store a = do
 -- accidentally interfere with retcon's internal data.
 
 -- | Run a 'DataSourceAction' action.
-runDataSourceAction :: state
-                    -> DataSourceAction state a
-                    -> RetconHandler s (Either RetconError a)
-runDataSourceAction s =
+runDataSourceAction :: RetconStore store => state
+                    -> DataSourceAction store state a
+                    -> RetconHandler store (Either RetconError a)
+runDataSourceAction state a = do
+    store <- asks retconStore
     liftIO
-    . runStderrLoggingT
-    . runExceptT
-    . flip runReaderT s
-    . unDataSourceAction
+        . runStderrLoggingT
+        . runExceptT
+        . flip runReaderT store
+        . flip runReaderT state
+        . unDataSourceAction $ a
 

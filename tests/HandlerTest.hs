@@ -18,17 +18,6 @@ module Main where
 
 import Test.Hspec
 
-import Retcon.Config
-import Retcon.DataSource
-import Retcon.Diff
-import Retcon.Document
-import Retcon.Error
-import Retcon.Handler
-import Retcon.Monad
-import Retcon.Options
-import Retcon.Store ()
-import Retcon.Store.PostgreSQL
-
 import Control.Exception
 import Control.Monad.Error.Class
 import Control.Monad.Reader
@@ -48,6 +37,17 @@ import qualified Data.Text as T
 import Database.PostgreSQL.Simple
 import GHC.TypeLits ()
 import System.Process
+
+import Retcon.Config
+import Retcon.DataSource
+import Retcon.Diff
+import Retcon.Document
+import Retcon.Error
+import Retcon.Handler
+import Retcon.Monad
+import Retcon.Options
+import Retcon.Store hiding (deleteInitialDocument)
+import Retcon.Store.PostgreSQL
 
 testDBName :: ByteString
 testDBName = "retcon_handler_test"
@@ -75,7 +75,7 @@ newTestDocument n doc' ref = do
 deleteDocumentIORef :: (RetconDataSource entity source)
                     => IORef (Map Text Value)
                     -> ForeignKey entity source
-                    -> DataSourceAction (DataSourceState entity source) ()
+                    -> DataSourceAction store (DataSourceState entity source) ()
 deleteDocumentIORef ref (ForeignKey fk') = do
     let k = T.pack fk'
     liftIO $ atomicModifyIORef' ref (\m -> (M.delete k m, ()))
@@ -85,7 +85,7 @@ setDocumentIORef :: (RetconDataSource entity source)
                  -> IORef (Map Text Value)
                  -> Document
                  -> Maybe (ForeignKey entity source)
-                 -> DataSourceAction (DataSourceState entity source) (ForeignKey entity source)
+                 -> DataSourceAction store (DataSourceState entity source) (ForeignKey entity source)
 setDocumentIORef name ref doc (Nothing) = do
     k <- liftIO $ atomicModifyIORef' ref
         (\m -> let k = T.pack $ name ++ (show . M.size $ m)
@@ -101,7 +101,7 @@ setDocumentIORef name ref doc (Just (ForeignKey fk')) = do
 getDocumentIORef :: (RetconDataSource entity source)
                  => IORef (Map Text Value)
                  -> ForeignKey entity source
-                 -> DataSourceAction (DataSourceState entity source) Document
+                 -> DataSourceAction store (DataSourceState entity source) Document
 getDocumentIORef ref (ForeignKey fk') = do
     let key = T.pack fk'
     doc' <- liftIO $ atomicModifyIORef' ref
