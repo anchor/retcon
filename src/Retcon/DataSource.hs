@@ -244,16 +244,6 @@ newtype DataSourceAction s a =
   deriving (Functor, Applicative, Monad, MonadBase IO, MonadIO, MonadLogger,
   MonadError RetconError, MonadReader s)
 
--- | Run a 'DataSourceAction' action.
-runDataSourceAction :: state
-                    -> DataSourceAction state a
-                    -> IO (Either RetconError a)
-runDataSourceAction s =
-    runStderrLoggingT
-    . runExceptT
-    . flip runReaderT s
-    . unDataSourceAction
-
 -- * Keys
 --
 -- $ The various parts of retcon refer to documents using two types of key

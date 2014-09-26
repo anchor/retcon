@@ -78,7 +78,7 @@ determineOperation :: (RetconStore s, RetconDataSource entity source)
 determineOperation state fk = do
     ik' <- lookupInternalKey fk
     doc' <- join . first RetconError <$> tryAny
-        (liftIO . runDataSourceAction state $ getDocument fk)
+        (runDataSourceAction state $ getDocument fk)
     return $ case (ik', doc') of
         (Nothing, Left  _) -> RetconProblem fk (RetconSourceError "Unknown key, no document")
         (Nothing, Right _) -> RetconCreate fk
@@ -155,7 +155,7 @@ create state fk = do
     liftIO $ S.recordForeignKey store ik fk
 
     -- Use the new Document as the initial document.
-    doc' <- join . first RetconError <$> tryAny (liftIO $ runDataSourceAction state $ getDocument fk)
+    doc' <- join . first RetconError <$> tryAny (runDataSourceAction state $ getDocument fk)
 
     case doc' of
         Left _ -> do
@@ -259,7 +259,7 @@ getDocuments ik = do
                     -- If there was a key, use it to fetch the document.
                     case mkey of
                         Nothing -> return . Left $ RetconFailed
-                        Just fk -> liftIO $ runDataSourceAction state $ getDocument fk
+                        Just fk -> runDataSourceAction state $ getDocument fk
                     )
     return . concat $ results
 
@@ -280,7 +280,7 @@ setDocuments ik docs = do
                 \(doc, InitialisedSource (_ :: Proxy source) state) ->
                     join . first RetconError <$> tryAny (do
                         (fk :: Maybe (ForeignKey entity source)) <- lookupForeignKey ik
-                        fk' <- liftIO $ runDataSourceAction state $ setDocument doc fk
+                        fk' <- runDataSourceAction state $ setDocument doc fk
                         case fk' of
                             Left err -> return $ Left err
                             Right new_fk -> do
@@ -307,7 +307,7 @@ deleteDocuments ik = do
                         (fk' :: Maybe (ForeignKey entity source)) <- lookupForeignKey ik
                         case fk' of
                             Nothing -> return $ Right ()
-                            Just fk -> liftIO $ runDataSourceAction state $ deleteDocument fk
+                            Just fk -> runDataSourceAction state $ deleteDocument fk
                     )
     return . concat $ results
 
