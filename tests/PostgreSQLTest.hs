@@ -24,6 +24,7 @@ import Control.Monad.IO.Class
 import Data.Monoid
 import Data.Proxy
 import DBHelpers
+import System.FilePath.Posix
 import Test.Hspec
 
 import Retcon.Core
@@ -176,8 +177,11 @@ run l a = do
     opt = defaultOptions
     state = []
 
+fixturePath :: FilePath
+fixturePath = "tests" </> "data" </> "sql"
+
 main :: IO ()
 main = do
-    resetTestDBWithFixture sourceDb "retcon_pg_test.sql"
-    resetTestDBWithFixture targetDb "retcon_pg_test2.sql"
+    resetTestDBWithFixture sourceDb $ fixturePath </> "retcon_pg_test.sql"
+    resetTestDBWithFixture targetDb $ fixturePath </> "retcon_pg_test2.sql"
     hspec suite

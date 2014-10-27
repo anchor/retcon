@@ -7,12 +7,6 @@
 -- the 3-clause BSD licence.
 --
 
--- | Description: Command-line application to process individual events.
---
--- This is a sample command-line interface to process events using the retcon
--- algorithm. It is intended as an example and demonstration piece more than a
--- useful tool.
-
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -21,66 +15,135 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+-- | Test the API round-trip.
 module Main where
 
 import Control.Applicative
+import Control.Concurrent
+import Control.Concurrent.Async
+import Control.Exception
+import Control.Lens
+import Data.ByteString ()
 import Data.Proxy
+import GHC.Exts (IsList (..))
+import System.Directory
+import System.FilePath.Posix
+import Test.Hspec
 
+import DBHelpers
 import Retcon.Core
 import Retcon.DataSource.JsonDirectory
+import Retcon.DataSource.PostgreSQL
+import Retcon.Document
 import Retcon.Monad
-
-import Test.Hspec
+import Retcon.Network.Client
+import Retcon.Network.Server
+import Retcon.Options
+import Retcon.Store.PostgreSQL
 import TestHelpers
 
--- | Set up an upstream and downstream entity reading writing to/from a JSON
--- directory.
+instance RetconEntity "acceptance-user" where
+    entitySources _ = [
+        SomeDataSource (Proxy :: Proxy "local"),
+        SomeDataSource (Proxy :: Proxy "upstream")
+        ]
 
-instance RetconEntity "entity" where
-    entitySources _ = [ SomeDataSource (Proxy :: Proxy "upstream")
-                      , SomeDataSource (Proxy :: Proxy "downstream")
-                      ]
+-- | Data sources are just JSON blobs in directories.
 
-instance RetconDataSource "entity" "upstream" where
+instance RetconDataSource "acceptance-user" "upstream" where
+    data DataSourceState "acceptance-user" "upstream" = UpstreamUser FilePath
 
-    data DataSourceState "entity" "upstream" = Upstream FilePath
-
-    initialiseState = Upstream <$> testJSONFilePath
+    initialiseState = UpstreamUser <$> testJSONFilePath
     finaliseState _ = return ()
 
     getDocument key =
-        getActionState >>= \(Upstream fp) -> getJSONDir fp key
+        getActionState >>= \(UpstreamUser fp) -> getJSONDir fp key
     setDocument doc key =
-        getActionState >>= \(Upstream fp) -> setJSONDir fp doc key
+        getActionState >>= \(UpstreamUser fp) -> setJSONDir fp doc key
     deleteDocument key =
-        getActionState >>= \(Upstream fp) -> deleteJSONDir fp key
+        getActionState >>= \(UpstreamUser fp) -> deleteJSONDir fp key
 
-instance RetconDataSource "entity" "downstream" where
+instance RetconDataSource "acceptance-user" "local" where
+    data DataSourceState "acceptance-user" "local" = LocalUser FilePath
 
-    data DataSourceState "entity" "downstream" = Downstream FilePath
-    initialiseState = Downstream <$> testJSONFilePath
+    initialiseState = LocalUser <$> testJSONFilePath
     finaliseState _ = return ()
 
     getDocument key =
-        getActionState >>= \(Downstream fp) -> getJSONDir fp key
+        getActionState >>= \(LocalUser fp) -> getJSONDir fp key
     setDocument doc key =
-        getActionState >>= \(Downstream fp) -> setJSONDir fp doc key
+        getActionState >>= \(LocalUser fp) -> setJSONDir fp doc key
     deleteDocument key =
-        getActionState >>= \(Downstream fp) -> deleteJSONDir fp key
+        getActionState >>= \(LocalUser fp) -> deleteJSONDir fp key
 
-entities :: [SomeEntity]
-entities = [ SomeEntity (Proxy :: Proxy "entity") ]
+suite :: String -> Spec
+suite conn =
+    describe "Retcon" $ do
+        -- | A modification is made upstream, Retcon is notified and it makes
+        -- the appropriate change locally
+        it "upstream change propogates locally" . withTestState conn $ \fk -> do
+            pending
+
+        -- | A record is removed upstream, retcon is notified, identifies this
+        -- as a a delete and removes the appropriate record locally.
+        it "upstream delete propogates locally" pending
+
+        -- | A record is modified both upstream and downstream in an
+        -- incompatible way. Retcon is notified of the upstream and downstream
+        -- change (two notifications in total) and correctly indicates a conflict
+        -- once.
+        --
+        -- The local change is chosen and this preference is propogated
+        -- upstream.
+        it "comparing and resolving diff works" pending
+
+withTestState
+    :: String
+    -> (ForeignKey "acceptance-user" "upstream" -> IO a)
+    -> IO a
+withTestState conn f = bracket setup teardown (f . fst)
+  where
+    hubert :: Document
+    hubert =
+        [ (["name"], "Hubert")
+        , (["address"], "123 Pony Avenue")
+        ] ^. to fromList . from _Wrapped
+
+    setup = do
+        let db = DBName "retcon_test"
+        let entities = []
+
+        -- Prepare the retcon and server configurations.
+        let server_cfg = ServerConfig conn
+        let opts = RetconOptions False LogStderr (pgConnStr db) Nothing
+
+        -- Spawn the server, giving it an initial database so that it's happy.
+        resetTestDBWithFixture db "retcon.sql"
+        retcon_cfg <- prepareConfig (opts, []) entities
+        server <- async $ apiServer retcon_cfg server_cfg
+
+        -- Create JSON fixture
+        fp <- testJSONFilePath
+        local_fk <- setJSONDir fp hubert Nothing
+        let (entity,source,key) = foreignKeyValue local_fk
+
+        -- Signal retcon to propogate this upstream
+        (runRetconZMQ conn $ enqueueChangeNotification $
+            ChangeNotification entity source key)
+            >>= either throwIO return
+
+        -- TODO: Don't wait here, check retcon somehow.
+        threadDelay 100000
+        return (local_fk, server)
+
+
+    teardown (_, server) = do
+        cancel server
+        -- Clear all the JSON blobs out
+        (</> "acceptance-user") <$> testJSONFilePath >>= removeFile
 
 main :: IO ()
-main = hspec suite
-
-suite :: Spec
-suite =
-    describe "Run with upstream change" $
-        it "propogates locally" pending
-            {--
-            let opts = defaultOptions
-            tok <- token . PGStore <$> connectPostgreSQL (opts ^. optDB)
-            let (entity:source:key:_) = opts ^. optArgs
-            res <- retcon opts cfg tok $ show (entity, source, key)
-            --}
+main = do
+    let conn = "tcp://127.0.0.1:1234"
+    -- Run the test suite.
+    hspec (suite conn)

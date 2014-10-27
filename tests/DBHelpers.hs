@@ -22,7 +22,7 @@ resetTestDBWithFixture (DBName db) fixture = do
     x <- system . intercalate " && " $
         [ "dropdb --if-exists " <> db
         , "createdb " <> db
-        , "psql " <> db <> " -f " <> "tests" </> "data" </> "sql" </> fixture
+        , "psql " <> db <> " -f " <> fixture
         ]
     case x of
         ExitSuccess ->

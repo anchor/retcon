@@ -10,27 +10,43 @@ The following use cases reference two data sources, *upstream* and *local*.
 
 These are arbitrary and are named like so to provide a tangible example.
 
+## Initial state
+
+Before each test, we can assume an *upstream* and *local* data source
+containing one common entity, *user*. These data sources have one entry in them
+respectively, that correlate with each other. Retcon is in "sync" with these
+entities and holds an initial document from both.
+
 ## Upstream change is propogated locally
 
 The fields called *first-name* and *last-name* are modified in the *upstream*
-data source, the library is invoked via an (external) notification system.
+data source.
 
-The library merges these two fields together into a *name* field and pushes
-that change to the *local* data source.
+A user now uses the enqueueChangeNotification library call to synchronise the
+"local" data source. The upstream change is merged locally and both records
+become congruent.
 
-A user now manually triggers the library to synchronise from *local* to
-*upstream*, nothing further is changed if we are the only user of the system.
+The user now issues a subsequent duplicate enqueueChangeNotification and
+nothing further is changed.
 
 ## Upstream delete is handled
 
-A record is deleted in the *upstream* data source, that deletion is either
-propogated or reverted, depending on configuration.
+A record is deleted in the *upstream* data source, that deletion is propogated
+*downstream* after a call to enqueueChangeNotification referencing the upstream
+change.
 
 ## Comparing and resolving conflicting diffs from different sources
 
 A record receives updates to the same fields from *local* and *upstream* at
-the same time, and the changes conflict. These will need to be resolved
-manually.
+the same time, and the changes conflict.
+
+The user tries to synchronise the changes via enqueueChangeNotification and
+then lists conflicts via getConflicted and the conflicting diff is shown. The
+user now decides to keep the local change and pushes this choice via
+enqueueResolveDiff.
+
+A subsequent call to getConflicted returns an empty set and the change is
+applied to both *upstream* and *downstream*.
 
 ### Send out notifications of conflicts
 

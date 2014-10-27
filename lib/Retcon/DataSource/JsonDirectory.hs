@@ -72,7 +72,9 @@ setJSONDir
     -> m (ForeignKey entity source)
 setJSONDir dir doc m_fk = liftIO $ do
     fk <- maybe (newFK dir) return m_fk
-    LBS.writeFile (buildPath dir fk) (encode doc)
+    let path = buildPath dir fk
+    createDirectoryIfMissing True (takeDirectory path)
+    LBS.writeFile path (encode doc)
     return fk
 
 -- | Unlink the underlying JSON file corresponding to the directory and
@@ -106,7 +108,7 @@ buildPath
     -> FilePath
 buildPath base fk =
     let (entity, source, key) = foreignKeyValue fk
-    in  base </> entity </> source </> key ++ ".json"
+    in base </> entity </> source </> key ++ ".json"
 
 -- | Decode a 'Document' from the JSON file at the given 'FilePath'
 loadDocument

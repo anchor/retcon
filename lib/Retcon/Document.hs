@@ -13,9 +13,14 @@
 -- system manipulates. Documents are, essentially, nested key/value
 -- maps.
 
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module Retcon.Document (
     Document (..),
@@ -29,6 +34,7 @@ module Retcon.Document (
 
 import Control.Applicative
 import Control.Lens hiding ((.=))
+import Control.Lens.TH
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Types (Parser)
@@ -43,13 +49,16 @@ import Data.Tree.GenericTrie
 import GHC.Exts (IsList (..))
 import Prelude hiding (lookup)
 
+type DocumentKey =  Text
+type DocumentValue = Text
+
 -- | A retcon 'Document' is an edge-labelled tree with 'Text' labels on
 -- both nodes and edges.
 newtype Document
     = Document { unDocument :: Tree DocumentKey DocumentValue }
   deriving (Monoid, Eq, Show)
-type DocumentKey =  Text
-type DocumentValue = Text
+makeWrapped ''Document
+
 
 mkNode
     :: Applicative f
