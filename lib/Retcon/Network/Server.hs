@@ -39,7 +39,7 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either
-import Data.List.NonEmpty hiding (filter, map, length)
+import Data.List.NonEmpty hiding (filter, length, map)
 import Data.Maybe
 import Data.Monoid
 import Data.String
@@ -191,12 +191,33 @@ instance Binary InvalidResponse where
     put _ = return ()
     get = return InvalidResponse
 
+-- | Request to flush and process all items from the work queue.
+data RequestFlushWork = RequestFlushWork
+  deriving (Eq, Show)
+
+-- | Response to flush-and-process request.
+data ResponseFlushWork = ResponseFlushWork Int
+  deriving (Eq, Show)
+
+instance Binary RequestFlushWork where
+    put _ = return ()
+    get   = return RequestFlushWork
+instance Binary ResponseFlushWork where
+    put (ResponseFlushWork n) = put n
+    get = do
+        n <- get
+        return $ ResponseFlushWork n
+
+-- | Message exchanged to be made in the network protocol.
 data Header request response where
     HeaderConflicted :: Header RequestConflicted ResponseConflicted
     HeaderChange :: Header RequestChange ResponseChange
     HeaderResolve :: Header RequestResolve ResponseResolve
     InvalidHeader :: Header InvalidRequest InvalidResponse
+    HeaderFlushWork :: Header RequestFlushWork ResponseFlushWork
 
+-- | Existential wrapper around some -- any -- 'Header' defining a valid
+-- protocol interaction.
 data SomeHeader where
     SomeHeader
         :: Header request response
@@ -206,11 +227,13 @@ instance Enum SomeHeader where
     fromEnum (SomeHeader HeaderConflicted) = 0
     fromEnum (SomeHeader HeaderChange) = 1
     fromEnum (SomeHeader HeaderResolve) = 2
+    fromEnum (SomeHeader HeaderFlushWork) = 3
     fromEnum (SomeHeader InvalidHeader) = maxBound
 
     toEnum 0 = SomeHeader HeaderConflicted
     toEnum 1 = SomeHeader HeaderChange
     toEnum 2 = SomeHeader HeaderResolve
+    toEnum 3 = SomeHeader HeaderFlushWork
     toEnum _ = SomeHeader InvalidHeader
 
 -- * Server configuration
@@ -315,6 +338,7 @@ protocol = loop
             HeaderConflicted -> encodeStrict <$> listConflicts (decode body)
             HeaderResolve -> encodeStrict <$> resolveConflict (decode body)
             HeaderChange -> encodeStrict <$> notify (decode body)
+            HeaderFlushWork -> encodeStrict <$> flushWork (decode body)
             InvalidHeader -> return . encodeStrict $ InvalidResponse
 
     -- Catch exceptions and inject them into the monad as errors.
@@ -413,6 +437,21 @@ listConflicts RequestConflicted = do
         "Found " <> show (Prelude.length conflicts) <> " conflicts!"
 
     return $ ResponseConflictedSerialised conflicts
+
+-- | Flush and process all work items in the work queue.
+flushWork
+    :: RequestFlushWork
+    -> RetconServer z ResponseFlushWork
+flushWork RequestFlushWork = do
+    logInfoN . fromString $
+        "Flushing work items from work queue."
+
+    n <- return 0
+
+    logDebugN . fromString $
+        "Flushed " <> show n <> " work items."
+
+    return $ ResponseFlushWork n
 
 -- | Retrieve selected 'DiffOp's from the store and combine them into a new
 -- 'Diff'.

@@ -22,8 +22,8 @@ import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Exception
-import Control.Monad.Trans.Maybe
 import Control.Lens
+import Control.Monad.Trans.Maybe
 import Data.ByteString ()
 import Data.Proxy
 import GHC.Exts (IsList (..))

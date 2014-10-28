@@ -55,6 +55,10 @@ suite conn = describe "Retcon API" $ do
         result <- runRetconZMQ conn $ enqueueChangeNotification note
         result `shouldBe` Right ()
 
+    it "replies to flush work requests with success" $ do
+        result <- runRetconZMQ conn $ flushWorkQueue
+        result `shouldBe` Right 0
+
     it "replies to invalid requests" $
         -- Right result <- runRetconZMQ conn $ performRequest InvalidHeader
         -- result `shouldbe` InvalidResponse
