@@ -391,25 +391,30 @@ postgresqlSuite = around prepareDatabase $
             storeAddWork store work1
             storeAddWork store work2
 
-            -- Order should be preserved
+            -- Claiming a work item should get the first one.
             work1' <- storeGetWork store
             snd <$> work1' `shouldBe` Just work1
 
-            -- Work should not be removed unless deleted
-            work1'' <- storeGetWork store
-            snd <$> work1'' `shouldBe` Just work1
-
-            let Just wid1 = fst <$> work1'
-            storeCompleteWork store wid1
+            -- Claiming another work item should get the second one.
             work2' <- storeGetWork store
             snd <$> work2' `shouldBe` Just work2
 
+            -- Marking as complete should not explode.
+            let Just wid1 = fst <$> work1'
+            storeCompleteWork store wid1
+
+            -- Marking as complete should not explode.
             let Just wid2 = fst <$> work2'
             storeCompleteWork store wid2
+
+            -- The empty queue should return nothing.
             nowork <- storeGetWork store
             nowork `shouldBe` Nothing
 
+            -- Adding another item should work.
             storeAddWork store work3
+
+            -- Getting it should work.
             work3' <- storeGetWork store
             snd <$> work3' `shouldBe` Just work3
 
