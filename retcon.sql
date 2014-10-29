@@ -77,10 +77,23 @@ CREATE TABLE retcon_notifications (
     FOREIGN KEY (diff_id) REFERENCES retcon_diff (diff_id)
 );
 
+-- | Enumeration of states for records in the `retcon_workitems` table.
+CREATE TYPE queue_state AS ENUM (
+    -- Items begin as NEW
+    'new',
+    -- Items are claimed by a worked and begin PROCESSING
+    'processing',
+    -- Items are COMPLETED
+    'completed'
+);
+
 -- | the `retcon_workitems` table acts as a persistent queue for `WorkItem`s
 CREATE TABLE retcon_workitems (
     id       SERIAL NOT NULL,
     content  JSON NOT NULL,
+
+    -- Each item is a state machine.
+    state queue_state DEFAULT 'new',
 
     PRIMARY KEY (id)
 );

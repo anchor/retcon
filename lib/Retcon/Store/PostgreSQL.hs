@@ -280,7 +280,12 @@ instance RetconStore PGStorage where
                _         -> return Nothing
            _ -> return Nothing
       where
-        sql = "SELECT id, content FROM retcon_workitems ORDER BY id ASC LIMIT 1"
+        sql = "UPDATE retcon_workitems SET state = 'processing' " <>
+              "WHERE " <>
+                  "id = (SELECT id FROM retcon_workitems " <>
+                        "WHERE state = 'new' ORDER BY id ASC LIMIT 1) " <>
+                  "AND state = 'new' " <>
+              "RETURNING id, content;"
 
     storeCompleteWork (PGStore conn _) work_id =
         void $ execute conn sql (Only work_id)
