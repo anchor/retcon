@@ -373,7 +373,7 @@ getDocuments ik = do
                         Nothing -> return . Left $ RetconFailed
                         Just fk -> do
                             res <- runRetconAction state $ getDocument fk
-                            whenVerbose . $logError . fromString $
+                            whenVerbose . $logDebug . fromString $
                                 "Retrieved document " <> show fk <> ": " <> show res
                             return res
                     )
