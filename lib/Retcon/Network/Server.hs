@@ -28,6 +28,7 @@ module Retcon.Network.Server where
 import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.Async
+import qualified Control.Exception as E
 import Control.Lens
 import Control.Monad
 import Control.Monad.Catch
@@ -486,13 +487,21 @@ apiServer retcon_cfg server_cfg = runLogging (retcon_cfg ^. cfgLogging) $ do
         "Running server on " <> server_cfg ^. cfgConnectionString
 
     -- Start the threads
-    liftIO $ race_
-        (bracket newState finaliseRetconState serverThread)
-        (bracket newState finaliseRetconState retconThread)
+    servert <- liftIO . async $ bracket newState finaliseRetconState serverThread
+    retcont <- liftIO . async $ bracket newState finaliseRetconState retconThread
+    liftIO . flip catch (cleanup servert retcont) $ do
+        void $ waitEitherCancel servert retcont
+        void . waitCatch $ servert
+        void . waitCatch $ retcont
 
     logDebugN . fromString $
         "Started API server and processing thread."
   where
+    cleanup :: Async a -> Async b -> E.AsyncException -> IO ()
+    cleanup t1 t2 _ = do
+        cancel t1
+        cancel t2
+        void $ waitBoth t1 t2
     newState =
         initialiseRetconState retcon_cfg ()
     serverThread state = do
