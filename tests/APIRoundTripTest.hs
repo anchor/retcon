@@ -26,7 +26,10 @@ import Retcon.Core
 import Retcon.Network.Client
 import Retcon.Network.Server
 import Retcon.Options
+import Retcon.DataSource.PostgreSQL
 import Retcon.Store.PostgreSQL
+
+import DBHelpers
 
 suite :: String -> Spec
 suite conn = describe "Retcon API" $ do
@@ -67,12 +70,15 @@ suite conn = describe "Retcon API" $ do
 main :: IO ()
 main = do
     let conn = "tcp://127.0.0.1:1234"
-    let db = "dbname=retcon_test"
+    let db = DBName "retcon_test"
     let entities = [SomeEntity (Proxy :: Proxy "TestEntity")]
+
+    -- Blow the testing database away.
+    resetTestDBWithFixture db "retcon.sql"
 
     -- Prepare the retcon and server configurations.
     let serverConfig = ServerConfig conn
-    let retconOpt = RetconOptions False LogStderr db Nothing
+    let retconOpt = RetconOptions False LogNone (pgConnStr db) Nothing
     retconConfig <- prepareConfig (retconOpt, []) entities
 
     -- Spawn the server.

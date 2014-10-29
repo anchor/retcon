@@ -350,8 +350,10 @@ test-suite           api-round-trip-test
                    , binary
                    , bytestring
                    , containers
+                   , filepath
                    , hspec
                    , mtl
+                   , process
                    , text
                    , retcon
 
