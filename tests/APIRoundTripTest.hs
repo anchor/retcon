@@ -33,6 +33,11 @@ import DBHelpers
 
 suite :: String -> Spec
 suite conn = describe "Retcon API" $ do
+
+    it "replies to flush work requests with success" $ do
+        result <- runRetconZMQ conn $ flushWorkQueue
+        result `shouldBe` Right 0
+
     it "replies to conflict list requests" $ do
         result <- runRetconZMQ conn getConflicted
         result `shouldBe` Right []
@@ -57,10 +62,6 @@ suite conn = describe "Retcon API" $ do
         let note = ChangeNotification "TestEntity" "TestSource" "item1"
         result <- runRetconZMQ conn $ enqueueChangeNotification note
         result `shouldBe` Right ()
-
-    it "replies to flush work requests with success" $ do
-        result <- runRetconZMQ conn $ flushWorkQueue
-        result `shouldBe` Right 0
 
     it "replies to invalid requests" $
         -- Right result <- runRetconZMQ conn $ performRequest InvalidHeader
@@ -102,8 +103,10 @@ instance RetconDataSource "TestEntity" "TestSource" where
 
     finaliseState _ = return ()
 
-    setDocument document fk = return undefined
+    setDocument document fk =
+        error "Cannot set document"
 
-    getDocument fk = return undefined
+    getDocument fk =
+        error "Cannot get document"
 
     deleteDocument fk = return ()
