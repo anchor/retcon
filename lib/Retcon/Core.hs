@@ -1067,37 +1067,20 @@ instance WritableToken RWToken where
         LE.handle
             (\e -> logException e >> return Nothing)
             (do
-                (work_id, item) <- liftIO $ getIt store
-                result <- worker item
-                liftIO $ storeCompleteWork store work_id
-                return $ Just result)
+                work <- liftIO $ storeGetWork store
+                case work of
+                    Nothing -> return Nothing
+                    Just (work_id, item) -> do
+                        result <- worker item
+                        liftIO $ storeCompleteWork store work_id
+                        return $ Just result
+            )
       where
         logException :: SomeException -> RetconMonad e s l ()
         logException e =
             case fromException e :: Maybe AsyncException of
                 Just e' -> LE.throw e'
                 Nothing -> logErrorN . fromString $ "Error processing work: " <> show e
-
-        -- | Print an exception.
-        --
-        -- TODO replace this with logException above.
-        printException :: SomeException -> IO (Maybe a)
-        printException e = case fromException e :: Maybe AsyncException of
-                Just e' -> LE.throw e'
-                Nothing -> do
-                  putStrLn . fromString $
-                       "Error getting work: " <> show e <> ". PS: I'm not dying!"
-                  return Nothing
-
-        -- | Get a work item from the work queue.
-        --
-        -- If there isn't one or an error occurs, try waiting for a while
-        -- before trying again.
-        getIt store = do
-            work <- storeGetWork store `catch` printException
-            case work of
-                Just item -> return item
-                Nothing   -> threadDelay 50000 >> getIt store
 
 -- | Massage the result of 'lookupDiff' to include a SomeInternalKey rather
 -- than (String, Int).

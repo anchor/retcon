@@ -26,6 +26,7 @@
 module Retcon.Network.Server where
 
 import Control.Applicative
+import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Lens
 import Control.Monad
@@ -446,7 +447,12 @@ flushWork RequestFlushWork = do
     logInfoN . fromString $
         "Flushing work items from work queue."
 
-    n <- return 0
+    -- Process the work items.
+    n <- runRetconMonadInServer $ do
+        result <- processWork processWorkItem
+        case result of
+            Just _ -> return 1
+            Nothing -> return 0
 
     logDebugN . fromString $
         "Flushed " <> show n <> " work items."
@@ -497,8 +503,15 @@ apiServer retcon_cfg server_cfg = runLogging (retcon_cfg ^. cfgLogging) $ do
           "Done server"
     retconThread state = do
         putStrLn . fromString $
-          "Starting worker, handling " <> (show . length $ state ^. retconConfig . cfgEntities) <> " entities"
-        void $ runRetconMonad state (forever $ processWork processWorkItem)
+          "Starting worker, handling " <>
+          (show . length $ state ^. retconConfig . cfgEntities) <>
+          " entities"
+        void . runRetconMonad state . forever $ do
+            work <- processWork processWorkItem
+            case work of
+                Just _  -> return ()
+                Nothing -> do
+                    liftIO . threadDelay $ 50000
         putStrLn "Done worker"
 
 -- | Inspect a work item and perform whatever task is required.
