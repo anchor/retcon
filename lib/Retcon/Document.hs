@@ -45,7 +45,7 @@ import qualified Data.Map as M
 import Data.Monoid
 import Data.Text (Text, unpack)
 import qualified Data.Text as T
-import Data.Tree.GenericTrie (Tree(..))
+import Data.Tree.GenericTrie (Tree (..))
 import GHC.Exts (IsList (..))
 import Prelude hiding (lookup)
 

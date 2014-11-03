@@ -22,8 +22,9 @@ import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Exception
-import Control.Monad.Trans.Maybe
 import Control.Lens
+import Control.Monad
+import Control.Monad.Trans.Maybe
 import Data.ByteString ()
 import Data.Proxy
 import GHC.Exts (IsList (..))
@@ -234,6 +235,7 @@ withTestState conn f = bracket setup teardown (uncurry f . fst)
 
     teardown (_, (server, retcon_cfg)) = do
         cancel server
+        void . waitCatch $ server
         cleanupConfig retcon_cfg
         -- Clear all the JSON blobs out
         (</> "acceptance-user") <$> testJSONFilePath >>= removeDirectoryRecursive

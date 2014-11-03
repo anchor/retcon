@@ -47,6 +47,7 @@ module Retcon.Network.Client
     getConflicted,
     enqueueResolveDiff,
     enqueueChangeNotification,
+    flushWorkQueue,
 
     runRetconZMQ,
 ) where
@@ -91,6 +92,16 @@ enqueueChangeNotification
     -> m ()
 enqueueChangeNotification notification =
     void $ performRequest HeaderChange (RequestChange notification)
+
+-- | Tell Retcon to flush the work queue, processing all items immediately.
+--
+-- Returns the number of work items processed.
+flushWorkQueue
+    :: (RetconClientConnection m, MonadError RetconAPIError m)
+    => m Int
+flushWorkQueue = do
+    ResponseFlushWork n <- performRequest HeaderFlushWork RequestFlushWork
+    return n
 
 newtype RetconClientZMQ z a =
     RetconClientZMQ {

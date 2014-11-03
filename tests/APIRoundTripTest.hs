@@ -26,10 +26,18 @@ import Retcon.Core
 import Retcon.Network.Client
 import Retcon.Network.Server
 import Retcon.Options
+import Retcon.DataSource.PostgreSQL
 import Retcon.Store.PostgreSQL
+
+import DBHelpers
 
 suite :: String -> Spec
 suite conn = describe "Retcon API" $ do
+
+    it "replies to flush work requests with success" $ do
+        result <- runRetconZMQ conn $ flushWorkQueue
+        result `shouldBe` Right 0
+
     it "replies to conflict list requests" $ do
         result <- runRetconZMQ conn getConflicted
         result `shouldBe` Right []
@@ -63,12 +71,15 @@ suite conn = describe "Retcon API" $ do
 main :: IO ()
 main = do
     let conn = "tcp://127.0.0.1:1234"
-    let db = "dbname=retcon_test"
+    let db = DBName "retcon_test"
     let entities = [SomeEntity (Proxy :: Proxy "TestEntity")]
+
+    -- Blow the testing database away.
+    resetTestDBWithFixture db "retcon.sql"
 
     -- Prepare the retcon and server configurations.
     let serverConfig = ServerConfig conn
-    let retconOpt = RetconOptions False LogStderr db Nothing
+    let retconOpt = RetconOptions False LogNone (pgConnStr db) Nothing
     retconConfig <- prepareConfig (retconOpt, []) entities
 
     -- Spawn the server.
@@ -92,8 +103,10 @@ instance RetconDataSource "TestEntity" "TestSource" where
 
     finaliseState _ = return ()
 
-    setDocument document fk = return undefined
+    setDocument document fk =
+        error "Cannot set document"
 
-    getDocument fk = return undefined
+    getDocument fk =
+        error "Cannot get document"
 
     deleteDocument fk = return ()

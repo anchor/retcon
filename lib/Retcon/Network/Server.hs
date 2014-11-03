@@ -26,7 +26,9 @@
 module Retcon.Network.Server where
 
 import Control.Applicative
+import Control.Concurrent
 import Control.Concurrent.Async
+import qualified Control.Exception as E
 import Control.Lens
 import Control.Monad
 import Control.Monad.Catch
@@ -39,7 +41,7 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either
-import Data.List.NonEmpty hiding (filter, map, length)
+import Data.List.NonEmpty hiding (filter, length, map)
 import Data.Maybe
 import Data.Monoid
 import Data.String
@@ -191,12 +193,33 @@ instance Binary InvalidResponse where
     put _ = return ()
     get = return InvalidResponse
 
+-- | Request to flush and process all items from the work queue.
+data RequestFlushWork = RequestFlushWork
+  deriving (Eq, Show)
+
+-- | Response to flush-and-process request.
+data ResponseFlushWork = ResponseFlushWork Int
+  deriving (Eq, Show)
+
+instance Binary RequestFlushWork where
+    put _ = return ()
+    get   = return RequestFlushWork
+instance Binary ResponseFlushWork where
+    put (ResponseFlushWork n) = put n
+    get = do
+        n <- get
+        return $ ResponseFlushWork n
+
+-- | Message exchanged to be made in the network protocol.
 data Header request response where
     HeaderConflicted :: Header RequestConflicted ResponseConflicted
     HeaderChange :: Header RequestChange ResponseChange
     HeaderResolve :: Header RequestResolve ResponseResolve
     InvalidHeader :: Header InvalidRequest InvalidResponse
+    HeaderFlushWork :: Header RequestFlushWork ResponseFlushWork
 
+-- | Existential wrapper around some -- any -- 'Header' defining a valid
+-- protocol interaction.
 data SomeHeader where
     SomeHeader
         :: Header request response
@@ -206,11 +229,13 @@ instance Enum SomeHeader where
     fromEnum (SomeHeader HeaderConflicted) = 0
     fromEnum (SomeHeader HeaderChange) = 1
     fromEnum (SomeHeader HeaderResolve) = 2
+    fromEnum (SomeHeader HeaderFlushWork) = 3
     fromEnum (SomeHeader InvalidHeader) = maxBound
 
     toEnum 0 = SomeHeader HeaderConflicted
     toEnum 1 = SomeHeader HeaderChange
     toEnum 2 = SomeHeader HeaderResolve
+    toEnum 3 = SomeHeader HeaderFlushWork
     toEnum _ = SomeHeader InvalidHeader
 
 -- * Server configuration
@@ -315,6 +340,7 @@ protocol = loop
             HeaderConflicted -> encodeStrict <$> listConflicts (decode body)
             HeaderResolve -> encodeStrict <$> resolveConflict (decode body)
             HeaderChange -> encodeStrict <$> notify (decode body)
+            HeaderFlushWork -> encodeStrict <$> flushWork (decode body)
             InvalidHeader -> return . encodeStrict $ InvalidResponse
 
     -- Catch exceptions and inject them into the monad as errors.
@@ -414,6 +440,26 @@ listConflicts RequestConflicted = do
 
     return $ ResponseConflictedSerialised conflicts
 
+-- | Flush and process all work items in the work queue.
+flushWork
+    :: RequestFlushWork
+    -> RetconServer z ResponseFlushWork
+flushWork RequestFlushWork = do
+    logInfoN . fromString $
+        "Flushing work items from work queue."
+
+    -- Process the work items.
+    n <- runRetconMonadInServer $ do
+        result <- processWork processWorkItem
+        case result of
+            Just _ -> return 1
+            Nothing -> return 0
+
+    logDebugN . fromString $
+        "Flushed " <> show n <> " work items."
+
+    return $ ResponseFlushWork n
+
 -- | Retrieve selected 'DiffOp's from the store and combine them into a new
 -- 'Diff'.
 composeNewDiff
@@ -441,13 +487,21 @@ apiServer retcon_cfg server_cfg = runLogging (retcon_cfg ^. cfgLogging) $ do
         "Running server on " <> server_cfg ^. cfgConnectionString
 
     -- Start the threads
-    liftIO $ race_
-        (bracket newState finaliseRetconState serverThread)
-        (bracket newState finaliseRetconState retconThread)
+    servert <- liftIO . async $ bracket newState finaliseRetconState serverThread
+    retcont <- liftIO . async $ bracket newState finaliseRetconState retconThread
+    liftIO . flip catch (cleanup servert retcont) $ do
+        void $ waitEitherCancel servert retcont
+        void . waitCatch $ servert
+        void . waitCatch $ retcont
 
     logDebugN . fromString $
         "Started API server and processing thread."
   where
+    cleanup :: Async a -> Async b -> E.AsyncException -> IO ()
+    cleanup t1 t2 _ = do
+        cancel t1
+        cancel t2
+        void $ waitBoth t1 t2
     newState =
         initialiseRetconState retcon_cfg ()
     serverThread state = do
@@ -458,8 +512,15 @@ apiServer retcon_cfg server_cfg = runLogging (retcon_cfg ^. cfgLogging) $ do
           "Done server"
     retconThread state = do
         putStrLn . fromString $
-          "Starting worker, handling " <> (show . length $ state ^. retconConfig . cfgEntities) <> " entities"
-        void $ runRetconMonad state (forever $ processWork processWorkItem)
+          "Starting worker, handling " <>
+          (show . length $ state ^. retconConfig . cfgEntities) <>
+          " entities"
+        void . runRetconMonad state . forever $ do
+            work <- processWork processWorkItem
+            case work of
+                Just _  -> return ()
+                Nothing -> do
+                    liftIO . threadDelay $ 50000
         putStrLn "Done worker"
 
 -- | Inspect a work item and perform whatever task is required.
