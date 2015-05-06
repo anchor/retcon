@@ -25,12 +25,12 @@ module Retcon.Identifier (
     compatibleSource,
 ) where
 
-import Data.Aeson.TH
-import Data.String
-import Data.Text (Text)
-import qualified Data.Text as T
-import Database.PostgreSQL.Simple.ToField
-import Database.PostgreSQL.Simple.ToRow
+import           Data.Aeson.TH
+import           Data.String
+import           Data.Text                          (Text)
+import qualified Data.Text                          as T
+import           Database.PostgreSQL.Simple.ToField
+import           Database.PostgreSQL.Simple.ToRow
 
 
 -- | Unique name for an entity.

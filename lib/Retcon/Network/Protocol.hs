@@ -8,20 +8,20 @@
 -- with retcond.
 module Retcon.Network.Protocol where
 
-import Control.Applicative
-import Control.Exception
-import Control.Lens.TH
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Diff as Diff
-import Data.Binary
-import qualified Data.ByteString as BS
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import Data.Typeable
+import           Control.Applicative
+import           Control.Exception
+import           Control.Lens.TH
+import qualified Data.Aeson          as Aeson
+import qualified Data.Aeson.Diff     as Diff
+import           Data.Binary
+import qualified Data.ByteString     as BS
+import qualified Data.Text           as T
+import qualified Data.Text.Encoding  as T
+import           Data.Typeable
 
-import Retcon.Document
-import Retcon.Identifier
-import Retcon.Store
+import           Retcon.Document
+import           Retcon.Identifier
+import           Retcon.Store
 
 -------------------------------------------------------------------------------
 -- * Errors

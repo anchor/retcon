@@ -12,36 +12,36 @@ module Retcon.Network.Server where
 import           Control.Applicative
 import           Control.Concurrent
 import           Control.Concurrent.Async
-import           Control.Error.Util           ()
-import qualified Control.Exception            as E
-import           Control.Lens                 hiding (Context, coerce)
+import           Control.Error.Util         ()
+import qualified Control.Exception          as E
+import           Control.Lens               hiding (Context, coerce)
 import           Control.Monad.Catch
 import           Control.Monad.Error.Class
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Except
-import qualified Data.Aeson.Diff              as D
+import qualified Data.Aeson.Diff            as D
 import           Data.Binary
-import qualified Data.ByteString              as BS hiding (unpack)
-import qualified Data.ByteString.Char8        as BS (unpack)
-import           Data.ByteString.Lazy         (fromStrict, toStrict)
-import qualified Data.ByteString.Lazy         as LBS
+import qualified Data.ByteString            as BS hiding (unpack)
+import qualified Data.ByteString.Char8      as BS (unpack)
+import           Data.ByteString.Lazy       (fromStrict, toStrict)
+import qualified Data.ByteString.Lazy       as LBS
 import           Data.Coerce
 import           Data.Either
-import qualified Data.List                    as L
-import           Data.List.NonEmpty           hiding (filter, length, map)
-import qualified Data.Map                     as M
+import qualified Data.List                  as L
+import           Data.List.NonEmpty         hiding (filter, length, map)
+import qualified Data.Map                   as M
 import           Data.Maybe
 import           Data.Monoid
 import           Data.String
-import qualified Data.Text                    as T
-import qualified Data.Text.Encoding           as T
-import           Data.Traversable             ()
+import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as T
+import           Data.Traversable           ()
 import           System.Log.Logger
 import           System.ZMQ4
 
 import           Retcon.Configuration
-import           Retcon.DataSource       (runDSMonad)
-import qualified Retcon.DataSource       as DS
+import           Retcon.DataSource          (runDSMonad)
+import qualified Retcon.DataSource          as DS
 import           Retcon.Diff
 import           Retcon.Document
 import           Retcon.Identifier

@@ -11,11 +11,11 @@
 
 module Main where
 
-import Data.Aeson.Diff (Operation(..))
+import           Data.Aeson.Diff (Operation (..))
 import qualified Data.Aeson.Diff as D
-import Test.Hspec
+import           Test.Hspec
 
-import Retcon.Diff
+import           Retcon.Diff
 
 suite :: Spec
 suite = do
@@ -70,8 +70,11 @@ suite = do
             c `shouldBe` [ RejectedOp (Name "peasant") $ Ins [D.OKey "value"] "two" ]
 
 
+mkPatch :: [Operation] -> Patch
 mkPatch = Patch Unamed . D.Patch
-mkRej   = RejectedOp Unamed
+
+mkRej :: Operation -> RejectedOp
+mkRej = RejectedOp Unamed
 
 main :: IO ()
 main = hspec suite

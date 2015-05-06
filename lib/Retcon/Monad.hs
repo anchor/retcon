@@ -13,16 +13,16 @@
 
 module Retcon.Monad where
 
-import Control.Applicative
-import Control.Exception
-import Control.Lens
-import Control.Monad.Error.Class
-import Control.Monad.Reader
-import Control.Monad.Trans.Except
-import Data.Typeable
+import           Control.Applicative
+import           Control.Exception
+import           Control.Lens
+import           Control.Monad.Error.Class
+import           Control.Monad.Reader
+import           Control.Monad.Trans.Except
+import           Data.Typeable
 
-import Retcon.Configuration
-import Retcon.DataSource
+import           Retcon.Configuration
+import           Retcon.DataSource
 
 
 data RetconError

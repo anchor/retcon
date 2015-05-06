@@ -10,10 +10,10 @@
 -- | Description: Run /Retcon/ as a server.
 module Retcon.Program.Daemon where
 
-import System.Log.Logger
+import           System.Log.Logger
 
-import Retcon.Configuration
-import Retcon.Network.Server
+import           Retcon.Configuration
+import           Retcon.Network.Server
 
 -- | Start the retcon daemon.
 retcon

@@ -40,9 +40,9 @@ module Retcon.Diff
      ) where
 
 import           Control.Applicative
-import           Control.Lens           hiding ((.=))
-import qualified Data.Aeson.Diff        as D
-import qualified Data.Map               as M
+import           Control.Lens        hiding ((.=))
+import qualified Data.Aeson.Diff     as D
+import qualified Data.Map            as M
 import           Data.Monoid
 
 import           Retcon.Document
@@ -74,6 +74,7 @@ data MergePolicy = MergePolicy
 
 type MergeResult = (Patch, [RejectedOp])
 
+emptyPatch :: Patch
 emptyPatch = Patch Unamed mempty
 
 --------------------------------------------------------------------------------

@@ -24,13 +24,13 @@ module Retcon.Document (
     calculateInitialDocument,
 ) where
 
-import Control.Lens
-import Control.Monad
-import Data.Aeson
-import Data.List
-import Data.Monoid
+import           Control.Lens
+import           Control.Monad
+import           Data.Aeson
+import           Data.List
+import           Data.Monoid
 
-import Retcon.Identifier
+import           Retcon.Identifier
 
 -- | A JSON 'Value' from a particular 'Entity'.
 data Document = Document

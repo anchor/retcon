@@ -8,18 +8,18 @@ module Retcon.Store.Memory
      , Mem
      ) where
 
-import Control.Applicative
-import Control.Lens
-import qualified Data.Aeson.Diff as D
-import Data.IORef
-import Data.Map (Map)
-import qualified Data.Map as M
-import Data.Monoid
+import           Control.Applicative
+import           Control.Lens
+import qualified Data.Aeson.Diff     as D
+import           Data.IORef
+import           Data.Map            (Map)
+import qualified Data.Map            as M
+import           Data.Monoid
 
-import Retcon.Diff
-import Retcon.Document
-import Retcon.Identifier
-import Retcon.Store.Base
+import           Retcon.Diff
+import           Retcon.Document
+import           Retcon.Identifier
+import           Retcon.Store.Base
 
 -- | An acid-state like in-memory store.
 type Mem = IORef MemStore
@@ -141,4 +141,5 @@ instance Store (IORef MemStore) where
 
   addWork      = const . const $ return ()
   getWork      = const $ return Nothing
+  ungetWork    = const . const $ return ()
   completeWork = const . const $ return ()

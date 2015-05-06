@@ -10,13 +10,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Control.Monad
-import Data.Aeson
-import Data.Monoid
-import Test.Hspec
-import Test.HUnit
+import           Control.Monad
+import           Data.Aeson
+import           Data.Monoid
+import           Test.Hspec
+import           Test.HUnit
 
-import Retcon
+import           Retcon
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 

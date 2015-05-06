@@ -17,26 +17,26 @@
 
 module Main where
 
-import Control.Applicative
-import Control.Exception
-import Control.Monad
-import Control.Monad.IO.Class
-import Data.Aeson
-import qualified Data.ByteString.Char8 as BS
-import Data.Monoid
-import Data.Text ()
-import qualified Data.Vector as V
-import Database.PostgreSQL.Simple
-import System.Process
-import Test.Hspec
+import           Control.Applicative
+import           Control.Exception
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Data.Aeson
+import qualified Data.ByteString.Char8      as BS
+import           Data.Monoid
+import           Data.Text                  ()
+import qualified Data.Vector                as V
+import           Database.PostgreSQL.Simple
+import           System.Process
+import           Test.Hspec
 
-import Retcon.Configuration
-import Retcon.Diff
-import Retcon.Document
-import Retcon.Identifier
-import Retcon.Monad
-import Retcon.Store
-import Retcon.Store.PostgreSQL
+import           Retcon.Configuration
+import           Retcon.Diff
+import           Retcon.Document
+import           Retcon.Identifier
+import           Retcon.Monad
+import           Retcon.Store
+import           Retcon.Store.PostgreSQL
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 

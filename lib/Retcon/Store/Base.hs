@@ -26,17 +26,17 @@ module Retcon.Store.Base
 
      ) where
 
-import Control.Applicative
-import Control.Lens hiding ((.=))
-import Control.Monad
-import Data.Aeson
-import qualified Data.Aeson.Diff as D
-import Data.ByteString (ByteString)
-import Data.Monoid
+import           Control.Applicative
+import           Control.Lens        hiding ((.=))
+import           Control.Monad
+import           Data.Aeson
+import qualified Data.Aeson.Diff     as D
+import           Data.ByteString     (ByteString)
+import           Data.Monoid
 
-import Retcon.Diff
-import Retcon.Document
-import Retcon.Identifier
+import           Retcon.Diff
+import           Retcon.Document
+import           Retcon.Identifier
 
 type DiffID  = Int
 type OpID    = Int

@@ -20,17 +20,17 @@ module Retcon.Program.Once
   , runPSQL
   ) where
 
-import Control.Exception
-import Control.Monad.IO.Class
-import Data.Aeson
+import           Control.Exception
+import           Control.Monad.IO.Class
+import           Data.Aeson
 
-import Retcon.Configuration
-import Retcon.DataSource
-import Retcon.Document
-import Retcon.Identifier
-import Retcon.Store
-import Retcon.Store.PostgreSQL
-import Retcon.Monad
+import           Retcon.Configuration
+import           Retcon.DataSource
+import           Retcon.Document
+import           Retcon.Identifier
+import           Retcon.Monad
+import           Retcon.Store
+import           Retcon.Store.PostgreSQL
 
 
 --------------------------------------------------------------------------------
@@ -85,5 +85,5 @@ inputDocument fk =
 runPSQL :: (PGStore -> IO a) -> Configuration -> IO a
 runPSQL act (configServer -> (_,_,pg_conn))
   = bracket (initBackend (PGOpts pg_conn))
-            (closeBackend)
+            closeBackend
             act

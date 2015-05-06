@@ -1,8 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE TypeFamilies      #-}
-{-# LANGUAGE ViewPatterns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE ViewPatterns        #-}
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -11,21 +11,21 @@ module Retcon.Store.PostgreSQL
      , StoreOpts(..)
      ) where
 
-import Control.Applicative
-import Control.Lens hiding (op)
-import Control.Monad
-import Data.Aeson
-import Data.Aeson.Diff ()
-import Data.ByteString (ByteString)
-import qualified Data.List as L
-import Data.Maybe
-import Data.Monoid
-import Data.String
-import Database.PostgreSQL.Simple
+import           Control.Applicative
+import           Control.Lens               hiding (op)
+import           Control.Monad
+import           Data.Aeson
+import           Data.Aeson.Diff            ()
+import           Data.ByteString            (ByteString)
+import qualified Data.List                  as L
+import           Data.Maybe
+import           Data.Monoid
+import           Data.String
+import           Database.PostgreSQL.Simple
 
-import Retcon.Diff hiding (diff)
-import Retcon.Identifier
-import Retcon.Store.Base hiding (ops)
+import           Retcon.Diff                hiding (diff)
+import           Retcon.Identifier
+import           Retcon.Store.Base          hiding (ops)
 
 data PGStore = PGStore
     { pgconn    :: !Connection

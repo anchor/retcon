@@ -3,19 +3,17 @@
 
 module Main where
 
-import Control.Applicative
-import Data.Monoid
-import qualified Data.Text as T
-import Options.Applicative hiding (command)
-import qualified Options.Applicative as O
-import Options.Applicative.Types
-import System.Exit
+import           Control.Applicative
+import           Data.Monoid
+import qualified Data.Text                 as T
+import           Options.Applicative       hiding (command)
+import qualified Options.Applicative       as O
+import           Options.Applicative.Types
+import           System.Exit
 
-import Retcon.Identifier
-import Retcon.Network.Client
-import Retcon.Network.Protocol
-import Retcon.Network.Server
-
+import           Retcon.Identifier
+import           Retcon.Network.Client
+import           Retcon.Network.Protocol
 
 data Options = Options
     { connection :: String

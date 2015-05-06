@@ -12,20 +12,20 @@
 
 module Main where
 
-import Control.Applicative
-import Control.Exception
-import Control.Monad.Trans.Except
-import Data.Configurator
-import Data.Monoid
-import qualified Data.Text.IO as T
-import Data.Version
-import Options.Applicative
-import System.Exit
-import System.FilePath
+import           Control.Applicative
+import           Control.Exception
+import           Control.Monad.Trans.Except
+import           Data.Configurator
+import           Data.Monoid
+import qualified Data.Text.IO               as T
+import           Data.Version
+import           Options.Applicative
+import           System.Exit
+import           System.FilePath
 
-import qualified Paths_retcon as Paths
-import Retcon hiding (Parser)
-import Retcon.Program.Daemon
+import qualified Paths_retcon               as Paths
+import           Retcon                     hiding (Parser)
+import           Retcon.Program.Daemon
 
 -- | Command line options for the server.
 data Options = Options

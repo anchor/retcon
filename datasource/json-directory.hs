@@ -6,22 +6,22 @@
 --
 module Main where
 
-import Control.Exception
-import Data.Aeson
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
-import Data.Monoid
-import qualified Data.Text as T
-import Options.Applicative
-import System.Directory
-import System.Exit
-import System.FilePath.Posix
-import System.Posix.Files
-import System.Random
+import           Control.Exception
+import           Data.Aeson
+import qualified Data.ByteString       as B
+import qualified Data.ByteString.Lazy  as BL
+import           Data.Monoid
+import qualified Data.Text             as T
+import           Options.Applicative
+import           System.Directory
+import           System.Exit
+import           System.FilePath.Posix
+import           System.Posix.Files
+import           System.Random
 
-import Retcon.DataSource
-import Retcon.Document
-import Retcon.Identifier
+import           Retcon.DataSource
+import           Retcon.Document
+import           Retcon.Identifier
 
 
 data JSONOpts = JSONOpts
