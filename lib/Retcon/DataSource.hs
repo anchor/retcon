@@ -34,6 +34,7 @@ import           Data.Aeson
 import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Char
+import           Data.List
 import           Data.Monoid
 import           Data.String                ()
 import           Data.Text                  (Text)
@@ -56,8 +57,11 @@ logName = "Retcon.DataSource"
 
 type ErrorMsg = String
 
+-- | Errors which can occur when invoking a data source command.
 data DataSourceError
-  = DecodeError            ErrorMsg
+  = DecodeError            ErrorMsg -- ^ Command returned invalid JSON.
+  | CommunicationError     Text     -- ^ Could not communicate with external system.
+  | NotFoundError          Text     -- ^ External system couldn't find the document.
   | ForeignError           Int Text
   | IncompatibleDataSource ErrorMsg
   deriving (Eq, Show, Typeable)
@@ -120,8 +124,11 @@ createDocument src doc = do
 
     -- 2. Spawn process.
     let cmd = prepareCommand src Nothing . commandCreate $ src
-        process = (shell cmd) { std_out = CreatePipe, std_in = CreatePipe, std_err = CreatePipe }
-    liftIO .debugM logName $ "CREATE command: " <> show cmd
+        process = (shell cmd) { std_out = CreatePipe
+                              , std_in = CreatePipe
+                              , std_err = CreatePipe
+                              }
+    debug src $ "CREATE: " <> show cmd
     (Just hin, Just hout, Just herr, hproc) <- liftIO $ createProcess process
 
     -- 3. Write input.
@@ -129,22 +136,17 @@ createDocument src doc = do
     liftIO $ hClose hin
 
     -- 4. Read handles
-    output <- T.filter (not. isSpace) . T.decodeUtf8 <$> (liftIO . BS.hGetContents $ hout)
-    err <- T.decodeUtf8 <$> (liftIO . BS.hGetContents $ herr)
+    (exit, output, err) <- liftIO $ gatherOutput (hproc, hout, herr)
+    let output' = T.filter (not . isSpace) $ T.decodeUtf8 output
+    let err' = T.decodeUtf8 err
 
-    -- 5. Check return code, raising error if required.
-    exit <- liftIO $ waitForProcess hproc
-    liftIO . debugM logName $ "CREATE exit: " <> show exit
+    -- 5. Log and return the result.
+    logDSMessage src "CREATE" (exit, err)
     case exit of
-        ExitFailure c -> let errorOutput = "stderr: " <> err <> "\nstdout: " <> output in
-            throwError $ ForeignError c errorOutput
-        ExitSuccess   -> return ()
-
-    -- 6. Close handles.
-    liftIO $ hClose hout
-
-    -- 7. Parse response.
-    return $ ForeignKey (sourceEntity src) (sourceName src) output
+        ExitFailure 1 -> throwError $ CommunicationError err'
+        ExitFailure c -> throwError $ ForeignError c err'
+        ExitSuccess   -> return $
+            ForeignKey (sourceEntity src) (sourceName src) output'
 
 -- | Access a 'DataSource' and retrieve the 'Document' identified, in that source,
 -- by the given 'ForeignKey'.
@@ -162,31 +164,26 @@ readDocument src fk = do
 
     -- 2. Spawn process.
     let cmd     = prepareCommand src (Just fk) . commandRead $ src
-        process = (shell cmd) { std_out = CreatePipe, std_err = CreatePipe }
-    liftIO . debugM logName $ "READ command: " <> show cmd
+        process = (shell cmd) { std_out = CreatePipe
+                              , std_err = CreatePipe
+                              }
+    debug src $ "READ: " <> show cmd
     (Nothing, Just hout, Just herr, hproc) <- liftIO $ createProcess process
 
     -- 3. Read output.
-    output <- liftIO $ BS.hGetContents hout
-    err <- liftIO $ BS.hGetContents herr
+    (exit, output, err) <- liftIO $ gatherOutput (hproc, hout, herr)
+    let err' = T.decodeUtf8 err
 
     -- 4. Check return code, raising error if required.
-    exit <- liftIO $ waitForProcess hproc
-    liftIO . debugM logName $ "READ exit: " <> show exit
+    logDSMessage src "READ" (exit, err)
     case exit of
-        ExitFailure c -> let errorOutput = "stderr: " <> T.decodeUtf8 err <> "\nstdout: " <> T.decodeUtf8 output in
-            throwError $ ForeignError c errorOutput
-        ExitSuccess   -> return ()
-
-    -- 5. Close handles.
-    liftIO $ do
-        hClose hout
-        hClose herr
-
-    -- 6. Parse input and return value.
-    case eitherDecode' . BSL.fromStrict $ output of
-        Left e  -> throwError $ DecodeError e
-        Right j -> return $ Document (fkEntity fk) (fkSource fk) j
+        ExitFailure 1 -> throwError $ CommunicationError err'
+        ExitFailure 2 -> throwError $ NotFoundError err'
+        ExitFailure c -> throwError $ ForeignError c err'
+        ExitSuccess   ->
+            case eitherDecode' . BSL.fromStrict $ output of
+                Left e  -> throwError $ DecodeError e
+                Right j -> return $ Document (fkEntity fk) (fkSource fk) j
 
 -- | Access a 'DataSource' and save the 'Document' under the specified
 -- 'ForeignKey', returning the 'ForeignKey' to use for the updated document in
@@ -206,9 +203,12 @@ updateDocument src fk doc = do
     checkCompatibility src doc
 
     -- 2. Spawn process.
-    let cmd = prepareCommand src (Just fk) . commandUpdate $ src
-        process = (shell cmd) { std_out = CreatePipe, std_in = CreatePipe, std_err = CreatePipe }
-    liftIO . debugM logName $ "UPDATE command: " <> show cmd
+    let cmd     = prepareCommand src (Just fk) . commandUpdate $ src
+        process = (shell cmd) { std_out = CreatePipe
+                              , std_in = CreatePipe
+                              , std_err = CreatePipe
+                              }
+    debug src $ "UPDATE: " <> show cmd
     (Just hin, Just hout, Just herr, hproc) <- liftIO $ createProcess process
 
     -- 3. Write input.
@@ -216,24 +216,18 @@ updateDocument src fk doc = do
     liftIO $ hClose hin
 
     -- 4. Read handles
-    output <- T.filter (not. isSpace) . T.decodeUtf8 <$> (liftIO . BS.hGetContents $ hout)
-    err <- T.decodeUtf8 <$> (liftIO . BS.hGetContents $ herr)
+    (exit, output', err) <- liftIO $ gatherOutput (hproc, hout, herr)
+    let output = T.filter (not. isSpace) . T.decodeUtf8 $ output'
+    let err' = T.decodeUtf8 err
 
     -- 5. Check return code, raising error if required.
-    exit <- liftIO $ waitForProcess hproc
-    liftIO . debugM logName $ "UPDATE exit: " <> show exit
+    logDSMessage src "UPDATE" (exit, err)
     case exit of
-        ExitFailure c -> let errorOutput = "stderr: " <> err <> "\nstdout: " <> output in
-            throwError $ ForeignError c errorOutput
-        ExitSuccess -> return ()
-
-    -- 6. Close handles.
-    liftIO $ do
-        hClose hout
-        hClose herr
-
-    -- 7. Parse response.
-    return $ ForeignKey (fkEntity fk) (fkSource fk) output
+        ExitFailure 1 -> throwError $ CommunicationError err'
+        ExitFailure 2 -> throwError $ NotFoundError err'
+        ExitFailure c -> throwError $ ForeignError c err'
+        ExitSuccess   -> return $
+            ForeignKey (fkEntity fk) (fkSource fk) output
 
 -- | Access a 'DataSource' and delete the 'Document' identified in that source
 -- by the given 'ForeignKey'.
@@ -251,23 +245,82 @@ deleteDocument src fk = do
 
     -- 2. Spawn process.
     let cmd     = prepareCommand src (Just fk) . commandDelete $ src
-        process = (shell cmd) { std_out = CreatePipe, std_err = CreatePipe }
-    liftIO . debugM logName $ "DELETE command: " <> show cmd
+        process = (shell cmd) { std_out = CreatePipe
+                              , std_err = CreatePipe
+                              }
+    debug src $ "DELETE: " <> show cmd
     (Nothing, Just hout, Just herr, hproc) <- liftIO $ createProcess process
 
     -- 3. Read output
-    output <- liftIO $ BS.hGetContents hout
-    err <- liftIO $ BS.hGetContents herr
+    (exit, _output, err) <- liftIO $ gatherOutput (hproc, hout, herr)
+    let err' = T.decodeUtf8 err
 
     -- 4. Check return code, raising error if required.
-    exit <- liftIO $ waitForProcess hproc
-    liftIO . debugM logName $ "DELETE exit: " <> show exit
+    logDSMessage src "DELETE" (exit, err)
     case exit of
-        ExitFailure c -> let errorOutput = "stderr: " <> T.decodeUtf8 err <> "\nstdout: " <> T.decodeUtf8 output in
-            throwError $ ForeignError c errorOutput
-        ExitSuccess -> return ()
+        ExitFailure 1 -> throwError $ CommunicationError err'
+        ExitFailure 2 -> return () -- So we didn't need to do anything.
+        ExitFailure c -> throwError $ ForeignError c err'
+        ExitSuccess   -> return ()
 
-    -- 5. Close handles.
-    liftIO $ do
-        hClose hout
-        hClose herr
+-- * Utility
+
+-- | Gather the stdout and stderr of a process, collecting the output in
+-- buffers until the process terminates.
+gatherOutput
+    :: (ProcessHandle, Handle, Handle)
+    -> IO (ExitCode, BS.ByteString, BS.ByteString)
+gatherOutput (ph, outh, errh) = go mempty mempty
+  where
+    go outs errs = do
+        -- Read any outstanding output.
+        outsmore <- BS.hGetNonBlocking outh (64 * 1024)
+        let outs' = outs <> outsmore
+        -- Read any outstanding errors.
+        errsmore <- BS.hGetNonBlocking errh (64 * 1024)
+        let errs' = errs <> errsmore
+        -- Check the exit status and either loop or return.
+        status <- getProcessExitCode ph
+        case status of
+            Nothing -> go outs' errs'
+            Just ec -> do
+                -- Fish any leftovers out of the pipes.
+                lastouts <- BS.hGetContents outh
+                lasterrs <- BS.hGetContents errh
+                return ( ec
+                       , outs' <> lastouts
+                       , errs' <> lasterrs
+                       )
+
+-- | Log data source error messages.
+logDSMessage
+    :: MonadIO m
+    => DataSource
+    -> String
+    -> (ExitCode, BS.ByteString)
+    -> m ()
+logDSMessage src cmd (ec, err) =
+    let msg = cmd <> ": " <> BS.unpack err
+        name = intercalate "." [logName
+                               , show (sourceEntity src)
+                               , show (sourceName src)
+                               ]
+    in liftIO $ case ec of
+        ExitSuccess   -> infoM  name msg
+        ExitFailure 1 -> alertM name msg
+        ExitFailure 2 -> errorM name msg
+        ExitFailure 3 -> errorM name msg
+        ExitFailure _ -> errorM name msg
+
+-- | Log a debugging message.
+debug
+    :: MonadIO m
+    => DataSource
+    -> String
+    -> m ()
+debug src msg =
+    let name = intercalate "." [logName
+                               , show (sourceEntity src)
+                               , show (sourceName src)
+                               ]
+    in liftIO . debugM name $ msg

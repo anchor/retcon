@@ -50,6 +50,13 @@ Data source programs should implement the following interface.
 
 ### General
 
+In short:
+
+- Did it work? You must exit with zero, and may log a message to stderr if you
+like.
+
+- Did it fail? You must exit with non-zero and must log a message to stderr.
+
 All operations must exit with status 0 when they complete successfully. They
 should produce any output required to the stdout stream and may produce
 debugging messages to stderr. These messages will be logged by Retcon at the
@@ -65,6 +72,10 @@ All operations which operate on an existing document must exit with status
 a useful error message to their stderr stream. These messages will be logged by
 Retcon at the ERROR log level.
 
+Operations which otherwise fail must exit with either status 3 or a status
+above 10, and must print a useful error message to their stderr stream. These
+message will be logged by Retcon at the ERROR level.
+
 ### Create
 
 The create operation inserts a new data item into a data source.
@@ -77,8 +88,7 @@ The data source must exit with status 1 if it could not communicate with the
 external system.
 
 The data source must exit with status 3 if the external system failed to create
-the new data item. A message describing the particular error should be output
-to the stderr stream.
+the new data item.
 
 ### Read
 
@@ -93,6 +103,9 @@ external system.
 
 The data source must exit with status 2 if the requested data item does not
 exist in the external system.
+
+The data source must exit with status 3 if the requested data item does exist
+but could not be read.
 
 ### Update
 
@@ -113,8 +126,7 @@ The data source must exit with status 2 if the requested data item does not
 exist in the external system.
 
 The data source must exit with status 3 if the external system failed to update
-the data item. A message describing the particular error should be output to
-the stderr stream.
+the data item.
 
 ### Delete
 
@@ -131,5 +143,4 @@ that the *pre*-condition to this operation was violated, even though the
 *post*-condition is met.
 
 The data source must exit with status 3 if the external system failed to delete
-the data item. A message describing the particular error should be output to
-the stderr stream.
+the data item.
