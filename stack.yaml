@@ -1,0 +1,9 @@
+flags: {}
+packages:
+- '.'
+extra-deps:
+- aeson-diff-0.1.1.2
+- edit-distance-vector-1.0.0.2
+- ekg-0.4.0.7
+- ekg-core-0.1.0.4
+resolver: lts-2.17

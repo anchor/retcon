@@ -55,13 +55,13 @@ instance Enum APIError where
 
 -- | Message headers for network protocol.
 data Header request response where
-    -- | Get a list of unresolved conflicts.
+    -- Get a list of unresolved conflicts.
     HeaderConflicted :: Header RequestConflicted ResponseConflicted
-    -- | Process a change
+    -- Process a change
     HeaderChange :: Header RequestChange ResponseChange
-    -- | Resolve an unresolved conflict.
+    -- Resolve an unresolved conflict.
     HeaderResolve :: Header RequestResolve ResponseResolve
-    -- | Invalid request/response.
+    -- Invalid request/response.
     InvalidHeader :: Header InvalidRequest InvalidResponse
 
 instance Enum SomeHeader where

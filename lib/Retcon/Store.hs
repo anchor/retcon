@@ -1,6 +1,7 @@
 module Retcon.Store
-     ( module S
+     ( module Retcon.Store.Base
+     , module Retcon.Store.Memory
      ) where
 
-import           Retcon.Store.Base   as S
-import           Retcon.Store.Memory as S
+import           Retcon.Store.Base
+import           Retcon.Store.Memory

@@ -1,10 +1,9 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE ViewPatterns        #-}
-
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Retcon.Store.PostgreSQL
      ( PGStore(..)
@@ -35,15 +34,22 @@ data PGStore = PGStore
     , pgconnstr :: !ByteString
     }
 
+-- | Concatenate SQL queries together.
+--
+--   If you use this function you are probably a terrible person.
 sqlConcat :: IsString x => [String] -> x
 sqlConcat = fromString . L.intercalate ";"
 
 onlySuccess :: FromJSON a => [Only Value] -> [a]
 onlySuccess = map fromSuccess . filter isSuccess . map (fromJSON . fromOnly)
+
+fromSuccess :: Result t -> t
 fromSuccess (Success a) = a
 fromSuccess _           = error "fromSuccess: Cannot unwrap not-a-success."
+
+isSuccess :: Result a -> Bool
 isSuccess (Success _)   = True
-isSuccess   _           = False
+isSuccess _             = False
 
 -- | Update ekg values for everything
 updateEkg :: Connection -> IO ()
@@ -203,8 +209,8 @@ instance Store PGStore where
       opsQ = "INSERT INTO retcon_diff_conflicts (diff_id, content) VALUES (?, ?)"
 
   resolveDiffs (PGStore conn _) did = do
-      execute conn "DELETE FROM retcon_diff_conflicts WHERE diff_id = ?" (Only did)
-      execute conn "UPDATE retcon_diff SET is_conflict = FALSE WHERE diff_id = ?" (Only did)
+      _ <- execute conn "DELETE FROM retcon_diff_conflicts WHERE diff_id = ?" (Only did)
+      _ <- execute conn "UPDATE retcon_diff SET is_conflict = FALSE WHERE diff_id = ?" (Only did)
       updateConflicts conn
 
   reduceDiff (PGStore conn _) patchID resolved = do

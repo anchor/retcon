@@ -136,6 +136,8 @@ instance Store (IORef MemStore) where
 
   resolveDiffs = const . const $ return ()
 
+  reduceDiff = const . const . const $ return ()
+
   lookupConflicts = const $ return []
   lookupDiffConflicts = const . const $ return []
 

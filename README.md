@@ -30,3 +30,31 @@ This package produces three executables:
 * retcon-oneshot: useful for testing and debugging, perform a retcon update
   without going through the rigmarole of setting up a retcond and then issuing
   a requests with retcon-client.
+
+Building
+--------
+
+You will require [zeromq][] and [libpq][] installed.
+
+[zeromq]: http://zeromq.org/
+[libpq]: http://www.postgresql.org/docs/9.4/static/libpq.html
+
+You can build *retcon* with standard Haskell tools:
+
+### Cabal
+
+Building *retcon* with [cabal][] is straightforward:
+
+```
+cabal configure
+cabal build
+cabal install
+```
+
+### Stack
+
+Building *retcon* with [stack][] is also straightforward:
+
+```
+stack install
+```

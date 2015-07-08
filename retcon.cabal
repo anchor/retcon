@@ -13,8 +13,15 @@ copyright:           Copyright 2014-2015 Thomas Sutton, Anchor Systems,
                      and others.
 category:            Data
 build-type:          Simple
-extra-source-files:  README.md
 cabal-version:       >=1.10
+extra-source-files:  README.md
+                     stack.yaml
+                     HLint.hs
+                     docs/*.md
+                     examples/*.conf
+                     schema/*.sql
+                     test/*.conf
+                     test/data/*.conf
 
 source-repository HEAD
   type: git
